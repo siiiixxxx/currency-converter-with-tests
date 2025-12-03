@@ -1,31 +1,36 @@
 import pytest
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 from api import fetch_rates
 
 
 def test_fetch_rates_success(temp_db, monkeypatch):
-    # Правильно мокаем urlopen с поддержкой timeout
-    mock_context = MagicMock()
-    mock_context.read.return_value = (
-        b'{"Valute": {"USD": {"Value": 95.5, "Nominal": 1}, "EUR": {"Value": 105.0, "Nominal": 1}}}'
-    )
+    # Мокаем весь процесс: и urlopen, и json.loads
+    fake_data = {
+        "Valute": {
+            "USD": {"Value": 95.5, "Nominal": 1},
+            "EUR": {"Value": 105.0, "Nominal": 1},
+            "CNY": {"Value": 13.3, "Nominal": 1},
+            "GBP": {"Value": 120.0, "Nominal": 1},
+        }
+    }
 
-    def mock_urlopen(url, timeout=None):
-        return mock_context
+    mock_response = MagicMock()
+    mock_response.read.return_value = b"whatever"  # не важно что
 
-    monkeypatch.setattr("urllib.request.urlopen", mock_urlopen)
+    with patch("urllib.request.urlopen", return_value=mock_response), patch(
+        "json.loads", return_value=fake_data
+    ):
 
-    rates = fetch_rates()
-    assert rates["USD"] == 95.5
-    assert rates["EUR"] == 105.0
+        rates = fetch_rates()
+
+    assert rates == {"USD": 95.5, "EUR": 105.0, "CNY": 13.3, "GBP": 120.0}
 
 
 def test_fetch_rates_connection_error(temp_db, monkeypatch):
-    def mock_urlopen(url, timeout=None):
-        raise ConnectionError("Нет интернета")
+    with patch("urllib.request.urlopen", side_effect=ConnectionError), patch(
+        "api.get_saved_rate", return_value=None
+    ):
 
-    monkeypatch.setattr("urllib.request.urlopen", mock_urlopen)
-    monkeypatch.setattr("api.get_saved_rate", lambda x: None)
+        rates = fetch_rates()
 
-    rates = fetch_rates()
     assert rates == {}
