@@ -12,12 +12,12 @@ def fetch_rates() -> dict:
             data = json.loads(response.read().decode())
 
         rates = {}
-        for code in ['USD', 'EUR', 'CNY', 'GBP']:
-            if code in data['Valute']:
-                info = data['Valute'][code]
-                rate = info['Value']
-                if info['Nominal'] != 1:
-                    rate = rate / info['Nominal']
+        for code in ["USD", "EUR", "CNY", "GBP"]:
+            if code in data["Valute"]:
+                info = data["Valute"][code]
+                rate = info["Value"]
+                if info["Nominal"] != 1:
+                    rate = rate / info["Nominal"]
                 rates[code] = round(rate, 4)
                 save_rate(code, rate)
 
@@ -27,6 +27,6 @@ def fetch_rates() -> dict:
         print(f"API error: {e}. Using DB cache.")
         return {
             code: get_saved_rate(code) or 0.0
-            for code in ['USD', 'EUR', 'CNY', 'GBP']
+            for code in ["USD", "EUR", "CNY", "GBP"]
             if get_saved_rate(code)
         }
